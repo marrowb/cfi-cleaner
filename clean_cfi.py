@@ -19,115 +19,93 @@ def sort_date_range_dict(data):
     sorted_dict = dict(sorted(data.items(), key=lambda x: get_start_date(x[0])))
     return sorted_dict
 
-def validate_old_data(file_path):
-    """Confirm that data is in bimonthly format, with correct columns"""
-    pass
-
-def validate_new_data(file_path):
-    """Confirm that data hasn't changed warn user if it has"""
-    pass
-
-def extract_credible_fear_csv(file_path):
-    """We expect the raw government data to have credible fear data in a specific format. We want to take the same steps we always take to identify it, and if the format has changed we still want to try to extract it but warn the user."""
-    pass
-
 def is_table_header(row):
     """Check if the given row is a table header."""
     if not row:
         return False
-    
-    # Check if the first cell contains text and the rest are empty
-    if row[0].strip() and all(cell.strip() == '' for cell in row[1:]):
-        return True
-    
-    return False
+    return row[0].strip() and all(cell.strip() == '' for cell in row[1:])
 
 def id_all_cfi_table(rows):
+    """Identify the 'All Credible Fear Cases' table."""
     for i, row in enumerate(rows):
         if is_table_header(row):
             target = "All Credible Fear Cases"
-            # Use fuzzy matching to compare the first cell with the target string
             similarity = fuzz.partial_ratio(row[0].lower(), target.lower())
-            # If the similarity is above 80%, consider it a match
             if similarity > 80:
                 return i
     return None
 
 def convert_to_int(value):
+    """Convert a string to an integer, return None if not possible."""
     try:
-        return int(value)
+        return int(value.replace(',', '').strip())
     except ValueError:
         return None
 
-def extract_credible_fear_data(file_path):
-    """Extract All Credible Fear Cases data from raw government file."""
-    data = defaultdict(list)
-    categories = ['Case Receipts', 'All Decisions', 'Fear Established_Persecution (Y)', 
-                  'Fear Established_Torture (Y)', 'Fear Not Established (N)', 'Administratively Closed']
-    
+def read_csv_file(file_path):
+    """Read CSV file and return rows."""
     try:
         with open(file_path, 'r', encoding='latin-1') as f:
             csv_reader = csv.reader(f)
-            # Skip the first two rows
+            next(csv_reader)  # Skip the first two rows
             next(csv_reader)
-            next(csv_reader)
-            
-            # Read the next 8 rows
-            rows = [row for row in csv_reader]
+            return [row for row in csv_reader]
     except UnicodeDecodeError:
         with open(file_path, 'r', encoding='utf-8') as f:
             csv_reader = csv.reader(f)
             next(csv_reader)
             next(csv_reader)
-            rows = [next(csv_reader) for _ in range(8)]
-    
+            return [next(csv_reader) for _ in range(8)]
 
+def extract_cfi_table(rows):
+    """Extract the CFI table from rows."""
     begin_cfi = id_all_cfi_table(rows)
-    
-    if begin_cfi is not None:
-        cfi_to_end = rows[begin_cfi+1:]
-        cfi_table = []
-        for row in cfi_to_end:
-            if not is_table_header(row):  # We pass a single row as a list
-                cfi_table.append(row)
-            else:
-                break
-    else:
+    if begin_cfi is None:
         print("Could not find the 'All Credible Fear Cases' table.")
         return []
+    
+    cfi_to_end = rows[begin_cfi+1:]
+    cfi_table = []
+    for row in cfi_to_end:
+        if not is_table_header(row):
+            cfi_table.append(row)
+        else:
+            break
+    return cfi_table
 
-    print("Loaded cfi table...")
-
-    # Extract dates and combine them
+def extract_date_ranges(cfi_table):
+    """Extract date ranges from CFI table."""
     _from = [row for row in cfi_table if row[0].strip().upper() == 'FROM'][0]
     _to = [row for row in cfi_table if row[0].strip().upper() == 'TO'][0]
-    date_ranges = [f"{start.strip()}-{end.strip()}" for start, end in zip(_from, _to)]
+    return [f"{start.strip()}-{end.strip()}" for start, end in zip(_from, _to)]
 
-    print("Extracted dates...")
-
-    # Extract data for each category
+def extract_category_data(cfi_table, categories):
+    """Extract data for each category."""
+    data = defaultdict(list)
     for row in cfi_table:
         if row[0].strip() in categories:
-            data[row[0].strip()] = [convert_to_int(value.replace(',', '').strip()) for value in row]
+            data[row[0].strip()] = [convert_to_int(value) for value in row]
+    return data
 
-    print("Extracted for each category...")
-
-    # Combine the data
+def combine_data(data, date_ranges):
+    """Combine data with date ranges."""
     for key, value in data.items():
         data[key] = dict(zip(date_ranges, value))
+    return data
 
-    print("Combined...")
-    
-    # Reformat the data here
+def format_date(date_str):
+    """Format date string."""
+    return datetime.strptime(date_str.strip(), '%m/%d/%Y').strftime('%Y-%m-%d')
+
+def reformat_data(data):
+    """Reformat the data."""
     result = {}
     for date_range in data['Case Receipts'].keys():
         if date_range not in ['From-To', '-']:
             try:
                 fear_established = data['Fear Established_Persecution (Y)'][date_range] + data['Fear Established_Torture (Y)'][date_range]
                 start_date, end_date = date_range.split('-')
-                formatted_start = datetime.strptime(start_date.strip(), '%m/%d/%Y').strftime('%Y-%m-%d')
-                formatted_end = datetime.strptime(end_date.strip(), '%m/%d/%Y').strftime('%Y-%m-%d')
-                str_date_range = f"{formatted_start}-{formatted_end}"
+                str_date_range = f"{format_date(start_date)}-{format_date(end_date)}"
                 row = {
                     'Case Receipts': f"{data['Case Receipts'][date_range]:,}",
                     'All Decisions': f"{data['All Decisions'][date_range]:,}",
@@ -138,8 +116,32 @@ def extract_credible_fear_data(file_path):
                 result[str_date_range] = row
             except ValueError as e:
                 print(f"Error processing date range: {date_range}. Error: {str(e)}")
-                continue
+    return result
 
+def extract_credible_fear_data(file_path):
+    """Extract All Credible Fear Cases data from raw government file."""
+    categories = ['Case Receipts', 'All Decisions', 'Fear Established_Persecution (Y)', 
+                  'Fear Established_Torture (Y)', 'Fear Not Established (N)', 'Administratively Closed']
+    
+    rows = read_csv_file(file_path)
+    cfi_table = extract_cfi_table(rows)
+    
+    if not cfi_table:
+        return []
+
+    print("Loaded cfi table...")
+    
+    date_ranges = extract_date_ranges(cfi_table)
+    print("Extracted dates...")
+    
+    data = extract_category_data(cfi_table, categories)
+    print("Extracted for each category...")
+    
+    combined_data = combine_data(data, date_ranges)
+    print("Combined...")
+    
+    result = reformat_data(combined_data)
+    
     return result
 
 
