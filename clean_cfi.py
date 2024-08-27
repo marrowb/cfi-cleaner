@@ -186,7 +186,18 @@ def main():
     sorted_data = sort_date_range_dict(data)
 
     # Write this data to a csv
+    output_file = 'bimonthly.csv'
+    headers = ['Date Range', 'Case Receipts', 'All Decisions', 'Fear Established (Y)', 'Fear Not Established (N)', 'Closings']
 
+    with open(output_file, 'w', newline='') as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=headers)
+        writer.writeheader()
+        for date_range, row_data in sorted_data.items():
+            row = {'Date Range': date_range}
+            row.update(row_data)
+            writer.writerow(row)
+
+    print(f"Data has been written to {output_file}")
 
     import IPython; IPython.embed()
     
