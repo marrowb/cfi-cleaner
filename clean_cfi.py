@@ -45,6 +45,12 @@ def id_all_cfi_table(rows):
                 return i
     return None
 
+def convert_to_int(value):
+    try:
+        return int(value)
+    except ValueError:
+        return None
+
 def extract_credible_fear_data(file_path):
     """Extract All Credible Fear Cases data from raw government file."""
     data = defaultdict(list)
@@ -71,10 +77,10 @@ def extract_credible_fear_data(file_path):
     begin_cfi = id_all_cfi_table(rows)
     
     if begin_cfi is not None:
-        cfi_to_end = rows[begin_cfi:]
+        cfi_to_end = rows[begin_cfi+1:]
         cfi_table = []
         for row in cfi_to_end:
-            if not id_all_cfi_table([row]):  # We pass a single row as a list
+            if not is_table_header(row):  # We pass a single row as a list
                 cfi_table.append(row)
             else:
                 break
@@ -84,17 +90,20 @@ def extract_credible_fear_data(file_path):
 
     print("Loaded cfi table...")
     import IPython; IPython.embed()
+
+
     # Extract dates and combine them
-    from_dates = rows[0][2:]
-    to_dates = rows[1][2:]
-    date_ranges = [f"{start.strip()}-{end.strip()}" for start, end in zip(from_dates, to_dates)]
+    _from = [row for row in cfi_table if row[0].strip().upper() == 'FROM'][0]
+    _to = [row for row in cfi_table if row[0].strip().upper() == 'TO'][0]
+    date_ranges = [f"{start.strip()}-{end.strip()}" for start, end in zip(_from, _to)]
 
     print("Extracted dates...")
     import IPython; IPython.embed()
 
     # Extract data for each category
-    for i, category in enumerate(categories, start=2):
-        data[category] = [value.replace(',', '') for value in rows[i][2:]]
+    for row in cfi_table:
+        if row[0].strip() in categories:
+            data[row[0].strip()] = [convert_to_int(value.replace(',', '').strip()) for value in row]
 
     print("Extracted for each category...")
     import IPython; IPython.embed()
