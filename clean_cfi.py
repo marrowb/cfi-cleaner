@@ -113,7 +113,8 @@ def extract_credible_fear_data(file_path):
     for key, value in data.items():
         data[key] = dict(zip(date_ranges, value))
 
-    print("Combined the data")
+    print("Combined...")
+    import IPython; IPython.embed()
     
     # Reformat the data here
     result = []
