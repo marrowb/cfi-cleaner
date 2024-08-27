@@ -11,6 +11,14 @@ def backup_file(file_path):
     shutil.copy2(file_path, backup_path)
     print(f"Backup created: {backup_path}")
 
+def sort_date_range_dict(data):
+    def get_start_date(date_range):
+        start_date_str = date_range.split('-')[:3]
+        return datetime.strptime('-'.join(start_date_str), '%Y-%m-%d')
+
+    sorted_dict = dict(sorted(data.items(), key=lambda x: get_start_date(x[0])))
+    return sorted_dict
+
 def validate_old_data(file_path):
     """Confirm that data is in bimonthly format, with correct columns"""
     pass
@@ -111,7 +119,7 @@ def extract_credible_fear_data(file_path):
     print("Combined...")
     
     # Reformat the data here
-    result = []
+    result = {}
     for date_range in data['Case Receipts'].keys():
         if date_range not in ['From-To', '-']:
             try:
@@ -119,24 +127,21 @@ def extract_credible_fear_data(file_path):
                 start_date, end_date = date_range.split('-')
                 formatted_start = datetime.strptime(start_date.strip(), '%m/%d/%Y').strftime('%Y-%m-%d')
                 formatted_end = datetime.strptime(end_date.strip(), '%m/%d/%Y').strftime('%Y-%m-%d')
+                str_date_range = f"{formatted_start}-{formatted_end}"
                 row = {
-                    'Date Range': f"{formatted_start}-{formatted_end}",
                     'Case Receipts': f"{data['Case Receipts'][date_range]:,}",
                     'All Decisions': f"{data['All Decisions'][date_range]:,}",
                     'Fear Established (Y)': f"{fear_established:,}",
                     'Fear Not Established (N)': f"{data['Fear Not Established (N)'][date_range]:,}",
                     'Closings': f"{data['Administratively Closed'][date_range]:,}"
                 }
-                result.append(row)
+                result[str_date_range] = row
             except ValueError as e:
                 print(f"Error processing date range: {date_range}. Error: {str(e)}")
                 continue
 
-    # Sort the result by date range in descending order
-    result.sort(key=lambda x: datetime.strptime(x['Date Range'].split('-')[0], '%Y-%m-%d'), reverse=True)
-    
-    print("Reformatted the data")
-    import IPython; IPython.embed()
+    return result
+
 
 
 def update_bimonthly_data(bimonthly_file, new_data):
@@ -145,54 +150,13 @@ def update_bimonthly_data(bimonthly_file, new_data):
         reader = csv.DictReader(f)
         bimonthly_data = list(reader)
 
+    bimonthly_dict = {}
     for row in bimonthly_data:
-        row['Date Range'] = datetime.strptime(row['Date Range'].split('-')[0], '%Y-%m-%d')
-        for key in row:
-            if key != 'Date Range':
-                row[key] = int(row[key])
+        date_range = row.pop('Date Range')
+        bimonthly_dict[date_range] = row
 
-    # Determine the cutoff date (one year before the latest date in new_data)
-    cutoff_date = max(row['Date Range'] for row in new_data) - timedelta(days=365)
-
-    # Remove data from the past year and append new data
-    bimonthly_data = [row for row in bimonthly_data if row['Date Range'] < cutoff_date]
-    bimonthly_data.extend(new_data)
-
-    # Sort the combined data
-    bimonthly_data.sort(key=lambda x: x['Date Range'], reverse=True)
-
-    # Convert 'Date Range' back to string format
-    for row in bimonthly_data:
-        start_date = row['Date Range']
-        end_date = start_date + timedelta(days=14)
-        row['Date Range'] = f"{start_date.strftime('%Y-%m-%d')}-{end_date.strftime('%Y-%m-%d')}"
-
-    return bimonthly_data
-
-def generate_monthly_data(bimonthly_data):
-    """Generate monthly data from bimonthly data."""
-    monthly_data = defaultdict(lambda: defaultdict(int))
-
-    for row in bimonthly_data:
-        date = datetime.strptime(row['Date Range'].split('-')[0], '%Y-%m-%d')
-        month = date.strftime('%Y-%m')
-        
-        for key in row:
-            if key != 'Date Range':
-                monthly_data[month][key] += int(row[key])
-
-    result = []
-    for month, data in sorted(monthly_data.items(), reverse=True):
-        result.append({
-            'Month': month,
-            'Case Receipts': data['Case Receipts'],
-            'All Decisions': data['All Decisions'],
-            'Fear Established (Y)': data['Fear Established (Y)'],
-            'Fear Not Established (N)': data['Fear Not Established (N)'],
-            'Closings': data['Closings']
-        })
-
-    return result
+    bimonthly_dict.update(new_data)
+    bimonthly_data = sort_date_range_dict(bimonthly_dict)
 
 def main():
     # Backup existing files
@@ -209,11 +173,11 @@ def main():
     updated_bimonthly = update_bimonthly_data('bimonthly.csv', new_data)
     
     # Save updated bimonthly data
-    with open('bimonthly.csv', 'w', newline='') as f:
-        writer = csv.DictWriter(f, fieldnames=['Date Range', 'Case Receipts', 'All Decisions', 'Fear Established (Y)', 'Fear Not Established (N)', 'Closings'])
-        writer.writeheader()
-        writer.writerows(updated_bimonthly)
-    print("Bimonthly data updated and saved.")
+    # with open('bimonthly.csv', 'w', newline='') as f:
+    #     writer = csv.DictWriter(f, fieldnames=['Date Range', 'Case Receipts', 'All Decisions', 'Fear Established (Y)', 'Fear Not Established (N)', 'Closings'])
+    #     writer.writeheader()
+    #     writer.writerows(updated_bimonthly)
+    # print("Bimonthly data updated and saved.")
     
     # Generate and save monthly data
     # monthly_data = generate_monthly_data(updated_bimonthly)
