@@ -33,6 +33,11 @@ def is_table_header(row):
     
     return False
 
+def id_all_cfi_table(row):
+    if is_table_header(row):
+    # fuzzy match the row[0] that begins or looks like 'All Credible Fear Cases' try to use only pythonl ibrary
+    pass
+
 def extract_credible_fear_data(file_path):
     """Extract All Credible Fear Cases data from raw government file."""
     data = defaultdict(list)
