@@ -140,8 +140,8 @@ def extract_credible_fear_data(file_path):
     
     return result
 
-def load_truth():
-    with open('cfi_truth.csv', 'r') as f:
+def load_truth(truth_file):
+    with open(truth_file, 'r') as f:
         r = csv.reader(f)
         rows = [row for row in r]
         row_dict = {}
@@ -159,28 +159,10 @@ def main():
     # Backup existing files
     #backup_file('bimonthly.csv')
     
-    # Get the most recent government file
-    gov_files = [f for f in os.listdir('gov-data') if f.startswith('Congressional-Semi-Monthly')]
-    # Build an ordered list of government files from oldest to newest
-    def extract_date(filename):
-        # Extract the date from the filename
-        date_str = filename.split('-Report-')[-1].replace('.csv', '').strip()
-        date_str = date_str.split('to')[0]
-        if not date_str[-1].isdigit():
-            date_str = date_str[:-1]
-        return datetime.strptime(date_str, '%m-%d-%y')
-
-    ordered_gov_files = sorted(gov_files, key=extract_date)
     
     # Process files in order from oldest to newest
     data = load_truth()
-    print("Loading truth data...")
-    import IPython; IPython.embed()
-    for gov_file in ordered_gov_files:
-        file_path = os.path.join('gov-data', gov_file)
-        print(f"Processing file: {file_path}")
-        new_data = extract_credible_fear_data(file_path)
-        data.update(new_data)
+
 
     if data.get('Date Range'):
         header = ['Date Range'] + list(data.pop('Date Range').keys())
@@ -189,7 +171,7 @@ def main():
 
     # Write this data to a csv
     output_file = 'bimonthly.csv'
-    import IPython; IPython.embed()
+
     flat = []
     for k,v in sorted_data.items():
         row = [k]
