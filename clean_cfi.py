@@ -43,7 +43,7 @@ def id_all_cfi_table(rows):
             # If the similarity is above 80%, consider it a match
             if similarity > 80:
                 return i
-        return None
+    return None
 
 def extract_credible_fear_data(file_path):
     """Extract All Credible Fear Cases data from raw government file."""
@@ -70,13 +70,17 @@ def extract_credible_fear_data(file_path):
 
     begin_cfi = id_all_cfi_table(rows)
     
-    cfi_to_end = [begin_cfi:]
-    cfi_table = []
-    for row in cfi_to_end:
-        if not is_all_cfi_table(row):
-            cfi_table.append(row)
-        else:
-            break
+    if begin_cfi is not None:
+        cfi_to_end = rows[begin_cfi:]
+        cfi_table = []
+        for row in cfi_to_end:
+            if not id_all_cfi_table([row]):  # We pass a single row as a list
+                cfi_table.append(row)
+            else:
+                break
+    else:
+        print("Could not find the 'All Credible Fear Cases' table.")
+        return []
 
     print("Loaded cfi table...")
     import IPython; IPython.embed()
