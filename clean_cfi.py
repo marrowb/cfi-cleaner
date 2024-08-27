@@ -172,11 +172,17 @@ def main():
     data = load_truth()
 
     
-    # Extract new data from the most recent government file
-    new_data = extract_credible_fear_data(latest_gov_file)
+    # Extract new data from each government file
+    all_new_data = {}
+    for gov_file in ordered_gov_files:
+        file_path = os.path.join('gov-data', gov_file)
+        print(f"Extracting data from file: {file_path}")
+        new_data = extract_credible_fear_data(file_path)
+        all_new_data.update(new_data)
+    
     import IPython; IPython.embed()
     
-    # Update bimonthly data
+    # TODO: Update bimonthly data using all_new_data
     #updated_bimonthly = update_bimonthly_data('bimonthly.csv', new_data)
     
     # Save updated bimonthly data
