@@ -114,8 +114,28 @@ def extract_credible_fear_data(file_path):
         data[key] = dict(zip(date_ranges, value))
 
     print("Combined the data")
-    import IPython; IPython.embed()
+    
     # Reformat the data here
+    result = []
+    for date_range in data['Case Receipts'].keys():
+        if date_range not in ['From-To', '-']:
+            fear_established = data['Fear Established_Persecution (Y)'][date_range] + data['Fear Established_Torture (Y)'][date_range]
+            row = {
+                'Date Range': datetime.strptime(date_range.split('-')[0], '%m/%d/%Y').strftime('%Y-%m-%d') + '-' + 
+                              datetime.strptime(date_range.split('-')[1], '%m/%d/%Y').strftime('%Y-%m-%d'),
+                'Case Receipts': f"{data['Case Receipts'][date_range]:,}",
+                'All Decisions': f"{data['All Decisions'][date_range]:,}",
+                'Fear Established (Y)': f"{fear_established:,}",
+                'Fear Not Established (N)': f"{data['Fear Not Established (N)'][date_range]:,}",
+                'Closings': f"{data['Administratively Closed'][date_range]:,}"
+            }
+            result.append(row)
+    
+    # Sort the result by date range in descending order
+    result.sort(key=lambda x: datetime.strptime(x['Date Range'].split('-')[0], '%Y-%m-%d'), reverse=True)
+    
+    print("Reformatted the data")
+    import IPython; IPython.embed()
 
 
 def update_bimonthly_data(bimonthly_file, new_data):
