@@ -24,7 +24,14 @@ def extract_credible_fear_csv(file_path):
 
 def is_table_header(row):
     """Check if the given row is a table header."""
-    pass
+    if not row:
+        return False
+    
+    # Check if the first cell contains text and the rest are empty
+    if row[0].strip() and all(cell.strip() == '' for cell in row[1:]):
+        return True
+    
+    return False
 
 def extract_credible_fear_data(file_path):
     """Extract All Credible Fear Cases data from raw government file."""
