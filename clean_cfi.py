@@ -164,46 +164,31 @@ def main():
     # Build an ordered list of government files from oldest to newest
     def extract_date(filename):
         # Extract the date from the filename
-        date_str = filename.split('-to-')[-1].split('.')[0].strip()
+        date_str = filename.split('-Report-')[-1].replace('.csv', '').strip()
+        date_str = date_str.split('to')[0]
+        if not date_str[-1].isdigit():
+            date_str = date_str[:-1]
         return datetime.strptime(date_str, '%m-%d-%y')
 
     ordered_gov_files = sorted(gov_files, key=extract_date)
     
     # Process files in order from oldest to newest
+    data = load_truth()
     for gov_file in ordered_gov_files:
         file_path = os.path.join('gov-data', gov_file)
         print(f"Processing file: {file_path}")
-    import IPython; IPython.embed()
-    data = load_truth()
-
-    
-    # Extract new data from each government file
-    all_new_data = {}
-    for gov_file in ordered_gov_files:
-        file_path = os.path.join('gov-data', gov_file)
-        print(f"Extracting data from file: {file_path}")
         new_data = extract_credible_fear_data(file_path)
-        all_new_data.update(new_data)
+        data.update(new_data)
+
+    if data.get('Date Range'):
+        header = data.pop('Date Range')
     
+    sorted_data = sort_date_range_dict(data)
+
+    # Write this data to a csv
+
+
     import IPython; IPython.embed()
     
-    # TODO: Update bimonthly data using all_new_data
-    #updated_bimonthly = update_bimonthly_data('bimonthly.csv', new_data)
-    
-    # Save updated bimonthly data
-    # with open('bimonthly.csv', 'w', newline='') as f:
-    #     writer = csv.DictWriter(f, fieldnames=['Date Range', 'Case Receipts', 'All Decisions', 'Fear Established (Y)', 'Fear Not Established (N)', 'Closings'])
-    #     writer.writeheader()
-    #     writer.writerows(updated_bimonthly)
-    # print("Bimonthly data updated and saved.")
-    
-    # Generate and save monthly data
-    # monthly_data = generate_monthly_data(updated_bimonthly)
-    # with open('monthly.csv', 'w', newline='') as f:
-    #     writer = csv.DictWriter(f, fieldnames=['Month', 'Case Receipts', 'All Decisions', 'Fear Established (Y)', 'Fear Not Established (N)', 'Closings'])
-    #     writer.writeheader()
-    #     writer.writerows(monthly_data)
-    # print("Monthly data generated and saved.")
-
 if __name__ == "__main__":
     main()
