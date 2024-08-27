@@ -1,15 +1,8 @@
 import csv
-import shutil
-from datetime import datetime, timedelta
-import os
+import io
+from datetime import datetime
 from collections import defaultdict
 from fuzzywuzzy import fuzz
-
-def backup_file(file_path):
-    """Create a backup of the given file."""
-    backup_path = file_path.replace('.csv', f'_backup_{datetime.now().strftime("%Y%m%d")}.csv')
-    shutil.copy2(file_path, backup_path)
-    print(f"Backup created: {backup_path}")
 
 def sort_date_range_dict(data):
     def get_start_date(date_range):
@@ -42,16 +35,10 @@ def convert_to_int(value):
     except ValueError:
         return None
 
-def read_csv_file(file_path):
+def read_csv_file(file):
     """Read CSV file and return rows."""
-    try:
-        with open(file_path, 'r', encoding='latin-1') as f:
-            csv_reader = csv.reader(f)
-            return [row for row in csv_reader]
-    except UnicodeDecodeError:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            csv_reader = csv.reader(f)
-            return [row for row in csv_reader]
+    csv_reader = csv.reader(io.StringIO(file.getvalue().decode('utf-8')))
+    return [row for row in csv_reader]
 
 def extract_cfi_table(rows):
     """Extract the CFI table from rows."""
@@ -114,79 +101,33 @@ def reformat_data(data):
                 print(f"Error processing date range: {date_range}. Error: {str(e)}")
     return result
 
-def extract_credible_fear_data(file_path):
+def extract_credible_fear_data(file):
     """Extract All Credible Fear Cases data from raw government file."""
     categories = ['Case Receipts', 'All Decisions', 'Fear Established_Persecution (Y)', 
                   'Fear Established_Torture (Y)', 'Fear Not Established (N)', 'Administratively Closed']
     
-    rows = read_csv_file(file_path)
+    rows = read_csv_file(file)
     cfi_table = extract_cfi_table(rows)
     
     if not cfi_table:
-        return []
+        return {}
 
-    print("Loaded cfi table...")
-    
     date_ranges = extract_date_ranges(cfi_table)
-    print("Extracted dates...")
-    
     data = extract_category_data(cfi_table, categories)
-    print("Extracted for each category...")
-    
     combined_data = combine_data(data, date_ranges)
-    print("Combined...")
-    
     result = reformat_data(combined_data)
     
     return result
 
 def load_truth(truth_file):
-    with open(truth_file, 'r') as f:
-        r = csv.reader(f)
-        rows = [row for row in r]
-        row_dict = {}
-        headers = []
-        for i, row in enumerate(rows):
-            if i == 0:
-                headers = row
+    csv_reader = csv.reader(io.StringIO(truth_file.getvalue().decode('utf-8')))
+    rows = [row for row in csv_reader]
+    row_dict = {}
+    headers = []
+    for i, row in enumerate(rows):
+        if i == 0:
+            headers = row
+        else:
             date_range = row.pop(0)
-            row_dict[date_range] = dict(zip(headers[0:],row))
+            row_dict[date_range] = dict(zip(headers[1:], row))
     return row_dict
-
-
-
-def main():
-    # Backup existing files
-    #backup_file('bimonthly.csv')
-    
-    
-    # Process files in order from oldest to newest
-    data = load_truth()
-
-
-    if data.get('Date Range'):
-        header = ['Date Range'] + list(data.pop('Date Range').keys())
-    
-    sorted_data = sort_date_range_dict(data)
-
-    # Write this data to a csv
-    output_file = 'bimonthly.csv'
-
-    flat = []
-    for k,v in sorted_data.items():
-        row = [k]
-        row.extend(val for val in v.values())
-        flat.append(row)
-
-
-    with open(output_file, 'w', newline='') as csvfile:
-        writer = csv.writer(csvfile)
-        writer.writerow(header)
-        for row in flat:
-            writer.writerow(row)
-
-    print(f"Data has been written to {output_file}")
-
-    
-if __name__ == "__main__":
-    main()
