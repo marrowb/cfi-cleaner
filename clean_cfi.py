@@ -89,8 +89,6 @@ def extract_credible_fear_data(file_path):
         return []
 
     print("Loaded cfi table...")
-    import IPython; IPython.embed()
-
 
     # Extract dates and combine them
     _from = [row for row in cfi_table if row[0].strip().upper() == 'FROM'][0]
@@ -98,7 +96,6 @@ def extract_credible_fear_data(file_path):
     date_ranges = [f"{start.strip()}-{end.strip()}" for start, end in zip(_from, _to)]
 
     print("Extracted dates...")
-    import IPython; IPython.embed()
 
     # Extract data for each category
     for row in cfi_table:
@@ -106,32 +103,35 @@ def extract_credible_fear_data(file_path):
             data[row[0].strip()] = [convert_to_int(value.replace(',', '').strip()) for value in row]
 
     print("Extracted for each category...")
-    import IPython; IPython.embed()
 
     # Combine the data
-    result = []
     for key, value in data.items():
         data[key] = dict(zip(date_ranges, value))
 
     print("Combined...")
-    import IPython; IPython.embed()
     
     # Reformat the data here
     result = []
     for date_range in data['Case Receipts'].keys():
         if date_range not in ['From-To', '-']:
-            fear_established = data['Fear Established_Persecution (Y)'][date_range] + data['Fear Established_Torture (Y)'][date_range]
-            row = {
-                'Date Range': datetime.strptime(date_range.split('-')[0], '%m/%d/%Y').strftime('%Y-%m-%d') + '-' + 
-                              datetime.strptime(date_range.split('-')[1], '%m/%d/%Y').strftime('%Y-%m-%d'),
-                'Case Receipts': f"{data['Case Receipts'][date_range]:,}",
-                'All Decisions': f"{data['All Decisions'][date_range]:,}",
-                'Fear Established (Y)': f"{fear_established:,}",
-                'Fear Not Established (N)': f"{data['Fear Not Established (N)'][date_range]:,}",
-                'Closings': f"{data['Administratively Closed'][date_range]:,}"
-            }
-            result.append(row)
-    
+            try:
+                fear_established = data['Fear Established_Persecution (Y)'][date_range] + data['Fear Established_Torture (Y)'][date_range]
+                start_date, end_date = date_range.split('-')
+                formatted_start = datetime.strptime(start_date.strip(), '%m/%d/%Y').strftime('%Y-%m-%d')
+                formatted_end = datetime.strptime(end_date.strip(), '%m/%d/%Y').strftime('%Y-%m-%d')
+                row = {
+                    'Date Range': f"{formatted_start}-{formatted_end}",
+                    'Case Receipts': f"{data['Case Receipts'][date_range]:,}",
+                    'All Decisions': f"{data['All Decisions'][date_range]:,}",
+                    'Fear Established (Y)': f"{fear_established:,}",
+                    'Fear Not Established (N)': f"{data['Fear Not Established (N)'][date_range]:,}",
+                    'Closings': f"{data['Administratively Closed'][date_range]:,}"
+                }
+                result.append(row)
+            except ValueError as e:
+                print(f"Error processing date range: {date_range}. Error: {str(e)}")
+                continue
+
     # Sort the result by date range in descending order
     result.sort(key=lambda x: datetime.strptime(x['Date Range'].split('-')[0], '%Y-%m-%d'), reverse=True)
     
