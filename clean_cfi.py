@@ -22,6 +22,10 @@ def extract_credible_fear_csv(file_path):
     """We expect the raw government data to have credible fear data in a specific format. We want to take the same steps we always take to identify it, and if the format has changed we still want to try to extract it but warn the user."""
     pass
 
+def is_table_header(row):
+    """Check if the given row is a table header."""
+    pass
+
 def extract_credible_fear_data(file_path):
     """Extract All Credible Fear Cases data from raw government file."""
     data = defaultdict(list)
@@ -36,22 +40,31 @@ def extract_credible_fear_data(file_path):
             next(csv_reader)
             
             # Read the next 8 rows
-            rows = [next(csv_reader) for _ in range(8)]
+            rows = [row for row in csv_reader]
     except UnicodeDecodeError:
         with open(file_path, 'r', encoding='utf-8') as f:
             csv_reader = csv.reader(f)
             next(csv_reader)
             next(csv_reader)
             rows = [next(csv_reader) for _ in range(8)]
+    
+    print("Loaded rows...")
+    import IPython; IPython.embed()
 
     # Extract dates and combine them
     from_dates = rows[0][2:]
     to_dates = rows[1][2:]
     date_ranges = [f"{start.strip()}-{end.strip()}" for start, end in zip(from_dates, to_dates)]
 
+    print("Extracted dates...")
+    import IPython; IPython.embed()
+
     # Extract data for each category
     for i, category in enumerate(categories, start=2):
         data[category] = [value.replace(',', '') for value in rows[i][2:]]
+
+    print("Extracted for each category...")
+    import IPython; IPython.embed()
 
     # Combine the data
     result = []
@@ -63,12 +76,16 @@ def extract_credible_fear_data(file_path):
         row['Closings'] = row.pop('Administratively Closed')
         result.append(row)
 
+    print("Combined the data")
+    import IPython; IPython.embed()
+
     # Sort the result by date in descending order
     result.sort(key=lambda x: x['Date Range'], reverse=True)
 
     # Select and order the required columns
     final_columns = ['Date Range', 'Case Receipts', 'All Decisions', 'Fear Established (Y)', 'Fear Not Established (N)', 'Closings']
     return [{col: row[col] for col in final_columns} for row in result]
+
 def update_bimonthly_data(bimonthly_file, new_data):
     """Update bimonthly data with new data from government file."""
     with open(bimonthly_file, 'r') as f:
@@ -127,7 +144,6 @@ def generate_monthly_data(bimonthly_data):
 def main():
     # Backup existing files
     backup_file('bimonthly.csv')
-    backup_file('monthly.csv')
     
     # Get the most recent government file
     gov_files = [f for f in os.listdir('gov-data') if f.startswith('Congressional-Semi-Monthly')]
@@ -147,12 +163,12 @@ def main():
     print("Bimonthly data updated and saved.")
     
     # Generate and save monthly data
-    monthly_data = generate_monthly_data(updated_bimonthly)
-    with open('monthly.csv', 'w', newline='') as f:
-        writer = csv.DictWriter(f, fieldnames=['Month', 'Case Receipts', 'All Decisions', 'Fear Established (Y)', 'Fear Not Established (N)', 'Closings'])
-        writer.writeheader()
-        writer.writerows(monthly_data)
-    print("Monthly data generated and saved.")
+    # monthly_data = generate_monthly_data(updated_bimonthly)
+    # with open('monthly.csv', 'w', newline='') as f:
+    #     writer = csv.DictWriter(f, fieldnames=['Month', 'Case Receipts', 'All Decisions', 'Fear Established (Y)', 'Fear Not Established (N)', 'Closings'])
+    #     writer.writeheader()
+    #     writer.writerows(monthly_data)
+    # print("Monthly data generated and saved.")
 
 if __name__ == "__main__":
     main()
