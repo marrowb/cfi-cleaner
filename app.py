@@ -15,10 +15,18 @@ def main():
     st.title("CFI Data Update Tool")
 
     # File upload for new government CFI table
-    gov_file = st.file_uploader("Upload new government CFI table (CSV)", type="csv")
+    gov_file = st.file_uploader(
+        "Upload new government CFI table (CSV)",
+        type="csv",
+        help="Upload the latest CFI Data file from the government. These are available at: https://www.uscis.gov/tools/reports-and-studies/semi-monthly-credible-fear-and-reasonable-fear-receipts-and-decisions"
+    )
 
     # File upload for CFI truth file
-    truth_file = st.file_uploader("Upload CFI truth file (CSV)", type="csv")
+    truth_file = st.file_uploader(
+        "Upload CFI truth file (CSV)",
+        type="csv",
+        help="Upload the CFI truth file. This file contains the data you know is correct and want to update with the new government data."
+    )
 
     if gov_file and truth_file:
         # Process the uploaded files
