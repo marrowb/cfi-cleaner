@@ -34,15 +34,16 @@ def is_table_header(row):
     
     return False
 
-def id_all_cfi_table(row):
-    if is_table_header(row):
-        target = "All Credible Fear Cases"
-        # Use fuzzy matching to compare the first cell with the target string
-        similarity = fuzz.partial_ratio(row[0].lower(), target.lower())
-        # If the similarity is above 80%, consider it a match
-        if similarity > 80:
-            return True
-    return False
+def id_all_cfi_table(rows):
+    for i, row in enumerate(rows):
+        if is_table_header(row):
+            target = "All Credible Fear Cases"
+            # Use fuzzy matching to compare the first cell with the target string
+            similarity = fuzz.partial_ratio(row[0].lower(), target.lower())
+            # If the similarity is above 80%, consider it a match
+            if similarity > 80:
+                return i
+        return None
 
 def extract_credible_fear_data(file_path):
     """Extract All Credible Fear Cases data from raw government file."""
@@ -66,9 +67,19 @@ def extract_credible_fear_data(file_path):
             next(csv_reader)
             rows = [next(csv_reader) for _ in range(8)]
     
-    print("Loaded rows...")
-    import IPython; IPython.embed()
 
+    begin_cfi = id_all_cfi_table(rows)
+    
+    cfi_to_end = [begin_cfi:]
+    cfi_table = []
+    for row in cfi_to_end:
+        if not is_all_cfi_table(row):
+            cfi_table.append(row)
+        else:
+            break
+
+    print("Loaded cfi table...")
+    import IPython; IPython.embed()
     # Extract dates and combine them
     from_dates = rows[0][2:]
     to_dates = rows[1][2:]
