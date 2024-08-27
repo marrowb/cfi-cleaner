@@ -161,8 +161,13 @@ def main():
     
     # Get the most recent government file
     gov_files = [f for f in os.listdir('gov-data') if f.startswith('Congressional-Semi-Monthly')]
-    # Change this line to build an ordered list from oldest to newest of gov't files
-    # latest_gov_file = os.path.join('gov-data', max(gov_files, key=lambda f: os.path.getctime(os.path.join('gov-data', f))))
+    # Build an ordered list of government files from oldest to newest
+    ordered_gov_files = sorted(gov_files, key=lambda f: os.path.getctime(os.path.join('gov-data', f)))
+    
+    # Process files in order from oldest to newest
+    for gov_file in ordered_gov_files:
+        file_path = os.path.join('gov-data', gov_file)
+        print(f"Processing file: {file_path}")
     import IPython; IPython.embed()
     data = load_truth()
 
