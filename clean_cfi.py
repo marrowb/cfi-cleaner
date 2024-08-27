@@ -3,6 +3,7 @@ import shutil
 from datetime import datetime, timedelta
 import os
 from collections import defaultdict
+from fuzzywuzzy import fuzz
 
 def backup_file(file_path):
     """Create a backup of the given file."""
@@ -35,8 +36,13 @@ def is_table_header(row):
 
 def id_all_cfi_table(row):
     if is_table_header(row):
-    # fuzzy match the row[0] that begins or looks like 'All Credible Fear Cases' try to use only pythonl ibrary
-    pass
+        target = "All Credible Fear Cases"
+        # Use fuzzy matching to compare the first cell with the target string
+        similarity = fuzz.partial_ratio(row[0].lower(), target.lower())
+        # If the similarity is above 80%, consider it a match
+        if similarity > 80:
+            return True
+    return False
 
 def extract_credible_fear_data(file_path):
     """Extract All Credible Fear Cases data from raw government file."""
