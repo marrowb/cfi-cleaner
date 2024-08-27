@@ -162,7 +162,12 @@ def main():
     # Get the most recent government file
     gov_files = [f for f in os.listdir('gov-data') if f.startswith('Congressional-Semi-Monthly')]
     # Build an ordered list of government files from oldest to newest
-    ordered_gov_files = sorted(gov_files, key=lambda f: os.path.getctime(os.path.join('gov-data', f)))
+    def extract_date(filename):
+        # Extract the date from the filename
+        date_str = filename.split('-to-')[-1].split('.')[0].strip()
+        return datetime.strptime(date_str, '%m-%d-%y')
+
+    ordered_gov_files = sorted(gov_files, key=extract_date)
     
     # Process files in order from oldest to newest
     for gov_file in ordered_gov_files:
