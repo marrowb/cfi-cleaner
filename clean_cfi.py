@@ -37,8 +37,14 @@ def convert_to_int(value):
 
 def read_csv_file(file):
     """Read CSV file and return rows."""
-    csv_reader = csv.reader(io.StringIO(file.getvalue().decode('utf-8')))
-    return [row for row in csv_reader]
+    try:
+        # Try reading with latin-1 encoding first
+        csv_reader = csv.reader(io.StringIO(file.getvalue().decode('latin-1')))
+        return [row for row in csv_reader]
+    except UnicodeDecodeError:
+        # If latin-1 fails, fall back to utf-8
+        csv_reader = csv.reader(io.StringIO(file.getvalue().decode('utf-8')))
+        return [row for row in csv_reader]
 
 def extract_cfi_table(rows):
     """Extract the CFI table from rows."""
