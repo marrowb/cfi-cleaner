@@ -47,15 +47,11 @@ def read_csv_file(file_path):
     try:
         with open(file_path, 'r', encoding='latin-1') as f:
             csv_reader = csv.reader(f)
-            next(csv_reader)  # Skip the first two rows
-            next(csv_reader)
             return [row for row in csv_reader]
     except UnicodeDecodeError:
         with open(file_path, 'r', encoding='utf-8') as f:
             csv_reader = csv.reader(f)
-            next(csv_reader)
-            next(csv_reader)
-            return [next(csv_reader) for _ in range(8)]
+            return [row for row in csv_reader]
 
 def extract_cfi_table(rows):
     """Extract the CFI table from rows."""
@@ -144,35 +140,39 @@ def extract_credible_fear_data(file_path):
     
     return result
 
+def load_truth():
+    with open('cfi_truth.csv', 'r') as f:
+        r = csv.reader(f)
+        rows = [row for row in r]
+        row_dict = {}
+        headers = []
+        for i, row in enumerate(rows):
+            if i == 0:
+                headers = row
+            date_range = row.pop(0)
+            row_dict[date_range] = dict(zip(headers[1:],row))
+    return row_dict
 
 
-def update_bimonthly_data(bimonthly_file, new_data):
-    """Update bimonthly data with new data from government file."""
-    with open(bimonthly_file, 'r') as f:
-        reader = csv.DictReader(f)
-        bimonthly_data = list(reader)
-
-    bimonthly_dict = {}
-    for row in bimonthly_data:
-        date_range = row.pop('Date Range')
-        bimonthly_dict[date_range] = row
-
-    bimonthly_dict.update(new_data)
-    bimonthly_data = sort_date_range_dict(bimonthly_dict)
 
 def main():
     # Backup existing files
-    backup_file('bimonthly.csv')
+    #backup_file('bimonthly.csv')
     
     # Get the most recent government file
     gov_files = [f for f in os.listdir('gov-data') if f.startswith('Congressional-Semi-Monthly')]
-    latest_gov_file = os.path.join('gov-data', max(gov_files, key=lambda f: os.path.getctime(os.path.join('gov-data', f))))
+    # Change this line to build an ordered list from oldest to newest of gov't files
+    # latest_gov_file = os.path.join('gov-data', max(gov_files, key=lambda f: os.path.getctime(os.path.join('gov-data', f))))
+    import IPython; IPython.embed()
+    data = load_truth()
+
     
     # Extract new data from the most recent government file
     new_data = extract_credible_fear_data(latest_gov_file)
+    import IPython; IPython.embed()
     
     # Update bimonthly data
-    updated_bimonthly = update_bimonthly_data('bimonthly.csv', new_data)
+    #updated_bimonthly = update_bimonthly_data('bimonthly.csv', new_data)
     
     # Save updated bimonthly data
     # with open('bimonthly.csv', 'w', newline='') as f:
