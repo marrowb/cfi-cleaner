@@ -110,23 +110,13 @@ def extract_credible_fear_data(file_path):
 
     # Combine the data
     result = []
-    for i in range(len(date_ranges)):
-        row = {'Date Range': datetime.strptime(date_ranges[i].split('-')[0].strip(), '%m/%d/%Y')}
-        for category in categories:
-            row[category] = int(data[category][i]) if data[category][i] else 0
-        row['Fear Established (Y)'] = row['Fear Established_Persecution (Y)'] + row['Fear Established_Torture (Y)']
-        row['Closings'] = row.pop('Administratively Closed')
-        result.append(row)
+    for key, value in data.items():
+        data[key] = dict(zip(date_ranges, value))
 
     print("Combined the data")
     import IPython; IPython.embed()
+    # Reformat the data here
 
-    # Sort the result by date in descending order
-    result.sort(key=lambda x: x['Date Range'], reverse=True)
-
-    # Select and order the required columns
-    final_columns = ['Date Range', 'Case Receipts', 'All Decisions', 'Fear Established (Y)', 'Fear Not Established (N)', 'Closings']
-    return [{col: row[col] for col in final_columns} for row in result]
 
 def update_bimonthly_data(bimonthly_file, new_data):
     """Update bimonthly data with new data from government file."""
