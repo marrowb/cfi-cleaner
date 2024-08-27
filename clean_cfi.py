@@ -150,7 +150,7 @@ def load_truth():
             if i == 0:
                 headers = row
             date_range = row.pop(0)
-            row_dict[date_range] = dict(zip(headers[1:],row))
+            row_dict[date_range] = dict(zip(headers[0:],row))
     return row_dict
 
 
@@ -174,6 +174,8 @@ def main():
     
     # Process files in order from oldest to newest
     data = load_truth()
+    print("Loading truth data...")
+    import IPython; IPython.embed()
     for gov_file in ordered_gov_files:
         file_path = os.path.join('gov-data', gov_file)
         print(f"Processing file: {file_path}")
@@ -181,25 +183,28 @@ def main():
         data.update(new_data)
 
     if data.get('Date Range'):
-        header = data.pop('Date Range')
+        header = ['Date Range'] + list(data.pop('Date Range').keys())
     
     sorted_data = sort_date_range_dict(data)
 
     # Write this data to a csv
     output_file = 'bimonthly.csv'
-    headers = ['Date Range', 'Case Receipts', 'All Decisions', 'Fear Established (Y)', 'Fear Not Established (N)', 'Closings']
+    import IPython; IPython.embed()
+    flat = []
+    for k,v in sorted_data.items():
+        row = [k]
+        row.extend(val for val in v.values())
+        flat.append(row)
+
 
     with open(output_file, 'w', newline='') as csvfile:
-        writer = csv.DictWriter(csvfile, fieldnames=headers)
-        writer.writeheader()
-        for date_range, row_data in sorted_data.items():
-            row = {'Date Range': date_range}
-            row.update(row_data)
+        writer = csv.writer(csvfile)
+        writer.writerow(header)
+        for row in flat:
             writer.writerow(row)
 
     print(f"Data has been written to {output_file}")
 
-    import IPython; IPython.embed()
     
 if __name__ == "__main__":
     main()
